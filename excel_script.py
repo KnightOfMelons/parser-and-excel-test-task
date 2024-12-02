@@ -28,32 +28,45 @@ def process_price_data(files, output_file="static/result/average_prices.xlsx"):
     results = []
 
     for file in files:
-        df = pd.read_excel(file, skiprows=2)
-        df_buryatia = df[df['Субъект РФ'] == 'Республика Бурятия']
+        for sheet_number in range(2, 15):
+            df = pd.read_excel(file, sheet_name=sheet_number, skiprows=2)
+            df_buryatia = df[df['Субъект РФ'] == 'Республика Бурятия']
 
-        if 'Цена в расчёте с учётом ЦЗСП, руб./МВт∙ч*' in df_buryatia.columns: # Решил сделать простую проверку на присутствие этого столбца
-            first_price = df_buryatia['Равновесная узловая цена, руб./МВт∙ч'].mean() # С помощью .mean() просто считаем среднее значение для столбцов
-            second_price = df_buryatia['Цена в расчёте без учёта ЦЗСП, руб./МВт∙ч*'].mean()
-            third_price = df_buryatia['Цена в расчёте с учётом ЦЗСП, руб./МВт∙ч*'].mean()
+            if 'Цена в расчёте с учётом ЦЗСП, руб./МВт∙ч*' in df_buryatia.columns: # Решил сделать простую проверку на присутствие этого столбца
+                first_price = df_buryatia['Равновесная узловая цена, руб./МВт∙ч'].mean() # С помощью .mean() просто считаем среднее значение для столбцов
+                second_price = df_buryatia['Цена в расчёте без учёта ЦЗСП, руб./МВт∙ч*'].mean()
+                third_price = df_buryatia['Цена в расчёте с учётом ЦЗСП, руб./МВт∙ч*'].mean()
 
-            # Решил использовать небольшой костыль. То есть он берет 20240902 из пути от символа / и до символа _, а затем преобразует в объект 
-            # datetime и в формат ДД.ММ.ГГГГ
-            date_str = file.split('/')[-1].split('_')[0]
-            date_obj = datetime.strptime(date_str, '%Y%m%d')
-            formatted_date = date_obj.strftime('%d.%m.%Y')
+                # Решил использовать небольшой костыль. То есть он берет 20240902 из пути от символа / и до символа _, а затем преобразует в объект 
+                # datetime и в формат ДД.ММ.ГГГГ
+                date_str = file.split('/')[-1].split('_')[0]
+                date_obj = datetime.strptime(date_str, '%Y%m%d')
+                formatted_date = date_obj.strftime('%d.%m.%Y')
 
-            results.append([formatted_date, first_price, second_price, third_price])
-        else:
-            print(f"Столбец 'Цена в расчёте с учётом ЦЗСП, руб./МВт∙ч*' отсутствует в файле {file}")
+                results.append([formatted_date, first_price, second_price, third_price])
+            else:
+                print(f"Столбец 'Цена в расчёте с учётом ЦЗСП, руб./МВт∙ч*' отсутствует в файле {file}")
 
-        result_df = pd.DataFrame(results, columns=[
-            'Дата',
-            'Равновесная узловая цена, руб./МВт∙ч',
-            'Цена в расчёте без учёта ЦЗСП, руб./МВт∙ч*',
-            'Цена в расчёте с учётом ЦЗСП, руб./МВт∙ч*'
-        ])
+    # Тут собираются все значения по страничкам, получается какая-то такая структура (покажу с 02.09.2024)
+    # 02.09.2024	1343,846505	1343,846505	1337,433069
+    # 02.09.2024	1364,554526	1364,554526	1361,788641
+    # 02.09.2024	1391,828953	1391,828953	1386,12471
+    # 02.09.2024	1421,947016	1421,947016	1420,460402
+    result_df = pd.DataFrame(results, columns=[
+        'Дата',
+        'Равновесная узловая цена, руб./МВт∙ч',
+        'Цена в расчёте без учёта ЦЗСП, руб./МВт∙ч*',
+        'Цена в расчёте с учётом ЦЗСП, руб./МВт∙ч*'
+    ])
 
-        result_df.to_excel(output_file, index=False, engine='openpyxl')
+    # А тут уже группирую по столбику Дата и ищу средние значения среди них (вроде как у вас по ТЗ так нужно было)
+    final_result = result_df.groupby('Дата').agg({
+        'Равновесная узловая цена, руб./МВт∙ч': 'mean',
+        'Цена в расчёте без учёта ЦЗСП, руб./МВт∙ч*': 'mean',
+        'Цена в расчёте с учётом ЦЗСП, руб./МВт∙ч*': 'mean'
+    }).reset_index()
+
+    final_result.to_excel(output_file, index=False, engine='openpyxl')
     print(f"Результаты сохранены в файл: {output_file}")
 
 
