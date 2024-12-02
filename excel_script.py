@@ -1,6 +1,10 @@
 import pandas as pd # Не забыть установить (pip install xlrd, pip install openpyxl)
 import openpyxl
+import logging
 from datetime import datetime
+
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 
 def process_price_data(files, output_file="static/result/average_prices.xlsx"):
@@ -42,6 +46,9 @@ def process_price_data(files, output_file="static/result/average_prices.xlsx"):
                 date_str = file.split('/')[-1].split('_')[0]
                 date_obj = datetime.strptime(date_str, '%Y%m%d')
                 formatted_date = date_obj.strftime('%d.%m.%Y')
+
+                # На всякий случай добавил логи, чтобы было понятно, что делает программа (она чуть дольше теперь выполняется к тому же)
+                logging.info(f"Обработка файла {file} для даты {formatted_date}")
 
                 results.append([formatted_date, first_price, second_price, third_price])
             else:
